@@ -52,6 +52,7 @@ cargo build --release
 
 lr-analysis activities --last 20
 lr-analysis analyse --last
+lr-analysis analyse --activity-id i12345678
 lr-analysis analyse --from 2026-01-01
 lr-analysis analyse --from 2026-01-01 --to 2026-08-15
 lr-analysis analyse --bucket-size 25
