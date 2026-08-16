@@ -92,10 +92,10 @@ power are shown.
 
 The `heatmap` command prints a terminal heat map with reported-power buckets as
 rows and cadence buckets as columns. The defaults are 50 W and 10 rpm, producing
-columns such as 70-80 rpm and 80-90 rpm. Each populated cell shows its mean
-left-leg percentage; ANSI background colour indicates left dominance, approximate
-50/50 balance, or right dominance. Colour is automatically disabled when output
-is redirected and can also be disabled with `--no-color`.
+columns such as 70-80 rpm and 80-90 rpm. Each populated cell shows its mean L/R
+percentage (for example `58.0/42.0`); ANSI background colour indicates left
+dominance, approximate 50/50 balance, or right dominance. Colour is automatically
+disabled when output is redirected and can also be disabled with `--no-color`.
 
 Crank-corrected balance is shown by default. Use `--balance reported` to display
 the balance received from the power meter. Cell suppression uses the same

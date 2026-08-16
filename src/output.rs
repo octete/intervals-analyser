@@ -143,7 +143,7 @@ pub fn print_heatmap(
     for rpm_bucket in min_rpm..=max_rpm {
         let lower = rpm_bucket as f64 * options.rpm_bucket_size;
         let upper = (rpm_bucket + 1) as f64 * options.rpm_bucket_size;
-        print!(" {:^9}", format_range(lower, upper));
+        print!(" {:^11}", format_range(lower, upper));
     }
     println!();
 
@@ -154,7 +154,7 @@ pub fn print_heatmap(
         for rpm_bucket in min_rpm..=max_rpm {
             match report.cells.get(&(power_bucket, rpm_bucket)) {
                 Some(cell) => print!(" {}", heat_cell(cell.mean_left_percent, use_color)),
-                None => print!(" {:^9}", "·"),
+                None => print!(" {:^11}", "·"),
             }
         }
         println!();
@@ -169,14 +169,13 @@ pub fn print_heatmap(
             heat_cell(45.0, true)
         );
     } else {
-        println!(
-            "Each value is mean left-leg percentage; right percentage is 100 minus the cell value."
-        );
+        println!("Each value is the mean L/R percentage for that power/cadence cell.");
     }
 }
 
 fn heat_cell(left_percent: f64, color: bool) -> String {
-    let content = format!("{:^9}", format!("{left_percent:.1}L"));
+    let right_percent = 100.0 - left_percent;
+    let content = format!("{:^11}", format!("{left_percent:.1}/{right_percent:.1}"));
     if !color {
         return content;
     }
@@ -210,5 +209,15 @@ fn format_duration(seconds: u64) -> String {
         format!("{hours}:{minutes:02}:{seconds:02}")
     } else {
         format!("{minutes}:{seconds:02}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::heat_cell;
+
+    #[test]
+    fn heatmap_cell_displays_left_and_right_percentages() {
+        assert_eq!(heat_cell(58.0, false).trim(), "58.0/42.0");
     }
 }
