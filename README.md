@@ -57,6 +57,12 @@ lr-analysis analyse --from 2026-01-01
 lr-analysis analyse --from 2026-01-01 --to 2026-08-15
 lr-analysis analyse --bucket-size 25
 lr-analysis analyse --min-samples 60 --min-duration 60
+
+lr-analysis heatmap --last
+lr-analysis heatmap --activity-id i12345678
+lr-analysis heatmap --from 2026-01-01 --to 2026-08-15
+lr-analysis heatmap --power-bucket-size 25 --rpm-bucket-size 5
+lr-analysis heatmap --balance reported --min-samples 30
 ```
 
 The crank defaults match this bike: 160 mm left, 165 mm right, with a 162.5 mm
@@ -81,6 +87,19 @@ pedalling technique, drivetrain losses, or other meter-specific processing.
 Buckets are always selected using the meter-reported total power so their ranges
 remain directly comparable with Intervals.icu. Both reported and corrected mean
 power are shown.
+
+## Power/cadence heat map
+
+The `heatmap` command prints a terminal heat map with reported-power buckets as
+rows and cadence buckets as columns. The defaults are 50 W and 10 rpm, producing
+columns such as 70-80 rpm and 80-90 rpm. Each populated cell shows its mean
+left-leg percentage; ANSI background colour indicates left dominance, approximate
+50/50 balance, or right dominance. Colour is automatically disabled when output
+is redirected and can also be disabled with `--no-color`.
+
+Crank-corrected balance is shown by default. Use `--balance reported` to display
+the balance received from the power meter. Cell suppression uses the same
+`--min-samples` and `--min-duration` options as `analyse`.
 
 ## Tests
 
