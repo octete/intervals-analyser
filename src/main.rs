@@ -5,6 +5,7 @@ mod config;
 mod heatmap;
 mod models;
 mod output;
+mod regression;
 
 use anyhow::{bail, Context, Result};
 use chrono::NaiveDate;
@@ -13,10 +14,11 @@ use clap::Parser;
 use crate::{
     analysis::{analyse_streams, AnalysisOptions, CrankSetup},
     api::IntervalsClient,
-    cli::{ActivitySelectionArgs, AnalyseArgs, Cli, Command, HeatmapArgs},
+    cli::{ActivitySelectionArgs, AnalyseArgs, Cli, Command, HeatmapArgs, RegressionArgs},
     config::Config,
     heatmap::{build_heatmap, HeatmapOptions},
     models::Activity,
+    regression::{fit_regression, RegressionOptions},
 };
 
 #[tokio::main]
@@ -32,6 +34,7 @@ async fn main() -> Result<()> {
         }
         Command::Analyse(args) => run_analysis(&client, args).await?,
         Command::Heatmap(args) => run_heatmap(&client, args).await?,
+        Command::Regression(args) => run_regression(&client, args).await?,
     }
 
     Ok(())
@@ -84,6 +87,32 @@ async fn run_heatmap(client: &IntervalsClient, args: HeatmapArgs) -> Result<()> 
         fetch_usable_streams(client, selected_activities, &required).await?;
     let report = build_heatmap(&activity_streams, &options)?;
     output::print_heatmap(&activities, &report, &options, args.no_color);
+    Ok(())
+}
+
+async fn run_regression(client: &IntervalsClient, args: RegressionArgs) -> Result<()> {
+    validate_selection(&args.selection)?;
+    let selected_activities = select_activities(client, &args.selection).await?;
+    let options = RegressionOptions {
+        min_power_w: args.min_power,
+        min_cadence_rpm: args.min_cadence,
+        reference_power_w: args.reference_power,
+        reference_cadence_rpm: args.reference_cadence,
+        interaction: args.interaction,
+        crank_setup: CrankSetup {
+            left_mm: args.left_crank,
+            right_mm: args.right_crank,
+            configured_mm: args.configured_crank,
+        },
+        balance_mode: args.balance,
+    };
+    options.validate()?;
+
+    let required = ["time", "watts", "cadence", "left_right_balance"];
+    let (activities, activity_streams) =
+        fetch_usable_streams(client, selected_activities, &required).await?;
+    let report = fit_regression(&activity_streams, &options)?;
+    output::print_regression(&activities, &report, &options);
     Ok(())
 }
 

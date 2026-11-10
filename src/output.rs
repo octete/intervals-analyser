@@ -5,6 +5,7 @@ use crate::{
     cli::BalanceMode,
     heatmap::{HeatmapOptions, HeatmapReport},
     models::Activity,
+    regression::{RegressionOptions, RegressionReport},
 };
 
 pub fn print_activities(activities: &[Activity]) {
@@ -173,6 +174,88 @@ pub fn print_heatmap(
     }
 }
 
+pub fn print_regression(
+    activities: &[Activity],
+    report: &RegressionReport,
+    options: &RegressionOptions,
+) {
+    let balance_label = match options.balance_mode {
+        BalanceMode::Reported => "reported",
+        BalanceMode::Corrected => "crank-corrected",
+    };
+    println!(
+        "Regression for {} cycling activit{} using {} {}-balance samples representing {}.",
+        activities.len(),
+        if activities.len() == 1 { "y" } else { "ies" },
+        report.sample_count,
+        balance_label,
+        format_duration(report.represented_secs.round() as u64)
+    );
+    println!(
+        "Included range: {:.0}-{:.0} W and {:.0}-{:.0} rpm (filters: power >= {:.0} W, cadence >= {:.0} rpm).",
+        report.min_power_w,
+        report.max_power_w,
+        report.min_cadence_rpm,
+        report.max_cadence_rpm,
+        options.min_power_w,
+        options.min_cadence_rpm
+    );
+    if report.filtered_samples > 0 || report.invalid_samples > 0 {
+        println!(
+            "Excluded {} samples below filters and {} samples with missing or invalid data.",
+            report.filtered_samples, report.invalid_samples
+        );
+    }
+
+    println!();
+    print!(
+        "L - 50 = {:.4} {:+.4} × ((P - {:.0}) / 100) {:+.4} × ((C - {:.0}) / 10)",
+        report.intercept_pp,
+        report.power_coefficient_pp_per_100w,
+        options.reference_power_w,
+        report.cadence_coefficient_pp_per_10rpm,
+        options.reference_cadence_rpm
+    );
+    if let Some(interaction) = report.interaction_coefficient_pp {
+        print!(
+            " {interaction:+.4} × ((P - {:.0}) / 100) × ((C - {:.0}) / 10)",
+            options.reference_power_w, options.reference_cadence_rpm
+        );
+    }
+    println!();
+
+    let reference_left = 50.0 + report.intercept_pp;
+    println!(
+        "Reference prediction at {:.0} W / {:.0} rpm: {} L/R",
+        options.reference_power_w,
+        options.reference_cadence_rpm,
+        format_balance(reference_left)
+    );
+    println!(
+        "Power effect:   {:+.4} percentage points of left share per +100 W",
+        report.power_coefficient_pp_per_100w
+    );
+    println!(
+        "Cadence effect: {:+.4} percentage points of left share per +10 rpm",
+        report.cadence_coefficient_pp_per_10rpm
+    );
+    if let Some(interaction) = report.interaction_coefficient_pp {
+        println!("Interaction:    {interaction:+.4} percentage points per (+100 W × +10 rpm)");
+    }
+
+    println!();
+    println!(
+        "Mean observed balance: {} L/R",
+        format_balance(report.mean_left_percent)
+    );
+    println!("R²: {:.4}", report.r_squared);
+    println!("Adjusted R²: {:.4}", report.adjusted_r_squared);
+    println!("RMSE: {:.4} percentage points", report.rmse_pp);
+    println!(
+        "Coefficients describe association, not causation; consecutive stream samples are autocorrelated."
+    );
+}
+
 fn heat_cell(left_percent: f64, color: bool) -> String {
     let right_percent = 100.0 - left_percent;
     let content = format!("{:^11}", format!("{left_percent:.1}/{right_percent:.1}"));
@@ -191,6 +274,10 @@ fn heat_cell(left_percent: f64, color: bool) -> String {
 
 fn format_range(lower: f64, upper: f64) -> String {
     format!("{}-{}", format_number(lower), format_number(upper))
+}
+
+fn format_balance(left_percent: f64) -> String {
+    format!("{left_percent:.2}/{:.2}", 100.0 - left_percent)
 }
 
 fn format_number(value: f64) -> String {

@@ -63,6 +63,11 @@ lr-analysis heatmap --activity-id i12345678
 lr-analysis heatmap --from 2026-01-01 --to 2026-08-15
 lr-analysis heatmap --power-bucket-size 25 --rpm-bucket-size 5
 lr-analysis heatmap --balance reported --min-samples 30
+
+lr-analysis regression --last
+lr-analysis regression --activity-id i12345678
+lr-analysis regression --from 2026-01-01 --min-power 50
+lr-analysis regression --interaction
 ```
 
 The crank defaults match this bike: 160 mm left, 165 mm right, with a 162.5 mm
@@ -100,6 +105,31 @@ disabled when output is redirected and can also be disabled with `--no-color`.
 Crank-corrected balance is shown by default. Use `--balance reported` to display
 the balance received from the power meter. Cell suppression uses the same
 `--min-samples` and `--min-duration` options as `analyse`.
+
+## Power/cadence regression
+
+The `regression` command fits ordinary least squares to left-side balance using a
+centred and scaled model:
+
+```text
+L - 50 = a + b × ((P - 200) / 100) + c × ((C - 85) / 10)
+```
+
+This makes `a` the predicted asymmetry at 200 W and 85 rpm, `b` the change in
+left share per additional 100 W, and `c` the change per additional 10 rpm. The
+reference values can be changed with `--reference-power` and
+`--reference-cadence`. `--interaction` adds the product of the scaled power and
+cadence terms.
+
+Crank-corrected balance is the default; use `--balance reported` for the meter's
+reported balance. Samples below 50 W or 1 rpm are excluded by default, removing
+low-power noise and coasting. These thresholds can be changed with `--min-power`
+and `--min-cadence`.
+
+The output includes the fitted formula, reference prediction, coefficient
+interpretations, R², adjusted R², RMSE, sample count, represented time, and data
+ranges. It deliberately does not report naïve p-values because consecutive
+second-by-second samples are autocorrelated.
 
 ## Tests
 

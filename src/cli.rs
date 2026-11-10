@@ -22,6 +22,8 @@ pub enum Command {
     Analyse(AnalyseArgs),
     /// Show L/R balance as a power-by-cadence heat map.
     Heatmap(HeatmapArgs),
+    /// Fit L/R balance against power and cadence.
+    Regression(RegressionArgs),
 }
 
 #[derive(Debug, Args)]
@@ -131,6 +133,48 @@ pub struct HeatmapArgs {
     pub no_color: bool,
 }
 
+#[derive(Debug, Args)]
+pub struct RegressionArgs {
+    #[command(flatten)]
+    pub selection: ActivitySelectionArgs,
+
+    /// Balance used as the regression outcome.
+    #[arg(long, value_enum, default_value_t = BalanceMode::Corrected)]
+    pub balance: BalanceMode,
+
+    /// Exclude samples below this reported power.
+    #[arg(long, default_value_t = 50.0, value_name = "WATTS")]
+    pub min_power: f64,
+
+    /// Exclude samples below this cadence (zero removes coasting).
+    #[arg(long, default_value_t = 1.0, value_name = "RPM")]
+    pub min_cadence: f64,
+
+    /// Power at which the intercept is evaluated.
+    #[arg(long, default_value_t = 200.0, value_name = "WATTS")]
+    pub reference_power: f64,
+
+    /// Cadence at which the intercept is evaluated.
+    #[arg(long, default_value_t = 85.0, value_name = "RPM")]
+    pub reference_cadence: f64,
+
+    /// Include a power-by-cadence interaction term.
+    #[arg(long)]
+    pub interaction: bool,
+
+    /// Actual left crank length in millimetres.
+    #[arg(long, default_value_t = 160.0, value_name = "MM")]
+    pub left_crank: f64,
+
+    /// Actual right crank length in millimetres.
+    #[arg(long, default_value_t = 165.0, value_name = "MM")]
+    pub right_crank: f64,
+
+    /// Single crank length configured in the power meter.
+    #[arg(long, default_value_t = 162.5, value_name = "MM")]
+    pub configured_crank: f64,
+}
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum BalanceMode {
     Reported,
@@ -187,5 +231,25 @@ mod tests {
         };
         assert_eq!(args.power_bucket_size, 25.0);
         assert_eq!(args.rpm_bucket_size, 5.0);
+    }
+
+    #[test]
+    fn parses_regression_options() {
+        let cli = Cli::try_parse_from([
+            "lr-analysis",
+            "regression",
+            "--activity-id",
+            "i12345678",
+            "--min-power",
+            "75",
+            "--interaction",
+        ])
+        .unwrap();
+
+        let Command::Regression(args) = cli.command else {
+            panic!("expected regression command");
+        };
+        assert_eq!(args.min_power, 75.0);
+        assert!(args.interaction);
     }
 }
