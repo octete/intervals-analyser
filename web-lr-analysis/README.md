@@ -2,6 +2,8 @@
 
 A Svelte + Go web application for analysing dual-sided cycling power from a dropped FIT activity file. It reports power buckets, a power/cadence heatmap with actual `L/R` values, and the regression model `L = a + bP + cC`, both as reported and corrected for unequal crank lengths.
 
+See [INTERPRETING_RESULTS.md](INTERPRETING_RESULTS.md) for a detailed explanation of every result, the regression coefficients, and the limits of the analysis. See [RUNNING.md](RUNNING.md) for local setup and startup instructions.
+
 ## Run locally
 
 Requirements: Go 1.26+ and Node 22.12+ (the current workspace's Node 22.0 still builds, but Vite prints an upgrade warning).
